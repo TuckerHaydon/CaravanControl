@@ -3,7 +3,7 @@
 
 \documentclass[12pt,onecolumn,reqno]{amsart}
 \usepackage{subcaption,wrapfig,graphicx,booktabs,fancyhdr,amsmath,amsfonts}
-\usepackage{cite,bm,amssymb,amsthm,wasysym,url,multirow,float}
+\usepackage{cite,bm,amssymb,amsthm,wasysym,url,multirow,float,mathtools}
 \newcommand{\vb}{\boldsymbol}
 \newcommand{\vbh}[1]{\hat{\boldsymbol{#1}}}
 \newcommand{\vbb}[1]{\bar{\boldsymbol{#1}}}
@@ -142,7 +142,7 @@ Define the system dynamics.
   \vec{u}
 \end{equation}
 
-Define the system observer.
+Define the system observer equation.
 \begin{equation}
   \vec{y} = 
   \begin{bmatrix}
@@ -224,7 +224,7 @@ that it is well-designed and amenable to both estimation and control.
 TODO Connor
 
 %%% ----------------------------------------------------------------------
-\section{Control System}
+\section{Control System Description}
 Controllers drive systems to the origin. The nominal system, however, should not
 be driven to the origin. Instead an error-state system should be specified where
 the error is the deviation of the nominal system from a reference signal.
@@ -244,29 +244,28 @@ velocity.
   \end{bmatrix}
 \end{equation}
 
-The error signal is the difference between the nominal and the reference state.
+The error signal is the difference between the nominal and the reference states.
+Note that not all states have a corresponding reference signal.
 \begin{equation}
   \vec{x_{e}} = 
   \begin{bmatrix}
-    x_{1} - x_{1_{r}}                 \\ 
     x_{1} - x_{2} - \Delta x_{12_{r}} \\
     x_{2} - x_{3} - \Delta x_{23_{r}} \\
-    v_{1} - v_{1_{r}}                 \\
-    v_{2} - v_{2_{r}}                 \\
-    v_{3} - v_{3_{r}}
+    v_{1} - v_{1_{r}}
   \end{bmatrix}
 \end{equation}
 
 The error signal is an affine transform using both the nominal state and the
-reference signal. The state dynamics for an affine transform don't conform to
-the standard $\dot{x} = Ax + Bu$ form. However, the standard form can be
-composed via the following trick: append the reference signal to the nominal
+reference signal. The error signal dynamics don't conform to the standard
+$\dot{x} = Ax + Bu$ form --- there is an affine transform between the error
+dynamics and the nominal and reference signals. However, the standard form can
+be composed via the following trick: append the reference signal to the nominal
 state and define zero dynamics and full observability for the reference
 substate.
 
-Define the error state and stack it on top of the reference signal. 
+Stack the nominal and reference states into the \textit{stacked state}.
 \begin{equation}
-  \vec{e} = 
+  \vec{x_{s}} = 
   \begin{bmatrix}
     x_{1}             \\
     x_{2}             \\
@@ -276,25 +275,23 @@ Define the error state and stack it on top of the reference signal.
     v_{3}             \\ 
     \Delta x_{12_{r}} \\
     \Delta x_{23_{r}} \\
-    v_{1_{r}}         \\
+    v_{1_{r}}
   \end{bmatrix}
 \end{equation}
 
-Define the error state dynamics.
+Define the stacked state dynamics.
 \begin{equation}
-  \dot{\vec{e}} = 
+  \dot{\vec{x}}_{s} = 
   \begin{bmatrix}
     v_{1}             \\
-    \Delta v_{12}     \\
-    \Delta v_{23}     \\
+    v_{2}             \\
+    v_{3}             \\
     a_{1}             \\
-    \Delta a_{12}     \\
-    \Delta a_{23}     \\ 
+    a_{2}             \\
+    a_{3}             \\ 
     0                 \\
     0                 \\
-    0                 \\
-    0                 \\
-    0                
+    0
   \end{bmatrix}
   =
   \underbrace{
@@ -307,64 +304,10 @@ Define the error state dynamics.
     0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
     0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
     0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
     0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0
   \end{bmatrix}
-  }_{A}
-  \vec{e}
-  +
-  \underbrace{
-  \begin{bmatrix}
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    1 & 0 & 0 \\
-    1 & -1 & 0 \\
-    0 & 1 & -1 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0
-  \end{bmatrix}
-  }_{B}
-  \vec{u}
-\end{equation}
-
-Define the error state observer equations.
-\begin{equation}
-  \vec{y} = 
-  \begin{bmatrix}
-    x_{1}             \\
-    \Delta x_{12}     \\
-    \Delta x_{23}     \\
-    a_{1}             \\
-    a_{2}             \\
-    a_{3}             \\
-    \Delta x_{12_{r}} \\
-    \Delta x_{23_{r}} \\
-    v_{1_{r}}         \\
-    \Delta v_{12_{r}} \\
-    \Delta v_{23_{r}}
-  \end{bmatrix}
-  =
-  \underbrace{
-  \begin{bmatrix}
-    1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1
-  \end{bmatrix}
-  }_{C}
-  \vec{e}
+  }_{A_{s}}
+  \vec{x}_{s}
   +
   \underbrace{
   \begin{bmatrix}
@@ -376,13 +319,122 @@ Define the error state observer equations.
     0 & 0 & 1 \\
     0 & 0 & 0 \\
     0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0 
+    0 & 0 & 0
   \end{bmatrix}
-  }_{D}
+  }_{B_{s}}
   \vec{u}
 \end{equation}
+
+Define the stacked state observer equation. Note that the reference states are
+specified and fully known so there is full state feedback for these states.
+\begin{equation}
+  \vec{y} = 
+  \begin{bmatrix}
+    x_{1}             \\
+    \Delta x_{12}     \\
+    \Delta x_{23}     \\
+    a_{1}             \\
+    a_{2}             \\
+    a_{3}             \\
+    \Delta x_{12_{r}} \\
+    \Delta x_{23_{r}} \\
+    v_{1_{r}}
+  \end{bmatrix}
+  =
+  \underbrace{
+  \begin{bmatrix}
+    1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    1 & -1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 1 & -1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\
+  \end{bmatrix}
+  }_{C_{s}}
+  \vec{x}_{s}
+  +
+  \underbrace{
+  \begin{bmatrix}
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    1 & 0 & 0 \\
+    0 & 1 & 0 \\
+    0 & 0 & 1 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0
+  \end{bmatrix}
+  }_{D_{s}}
+  \vec{u}
+\end{equation}
+
+Now define the error state by linearly transforming the stacked state via a
+\textit{similiarity transform}.
+
+\begin{equation}
+  \vec{x}_{e} = 
+  \begin{bmatrix}
+    x_{1}               \\
+    \Delta x_{12_{e}}   \\
+    \Delta x_{23_{e}}   \\
+    v_{1_{e}}           \\
+    v_{2}               \\
+    v_{3}               \\ 
+    \Delta x_{12_{r}}   \\
+    \Delta x_{23_{r}}   \\
+    v_{1_{r}}
+  \end{bmatrix}
+  =
+  \underbrace{
+  \begin{bmatrix}
+    1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    1 & -1 & 0 & 0 & 0 & 0 & -1 & 0 & 0 \\
+    0 & 1 & -1 & 0 & 0 & 0 & 0 & -1 & 0 \\
+    0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & -1 \\
+    0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1
+  \end{bmatrix}
+  }_{T}
+  \begin{bmatrix}
+    x_{1}             \\
+    x_{2}             \\
+    x_{3}             \\
+    v_{1}             \\
+    v_{2}             \\
+    v_{3}             \\ 
+    \Delta x_{12_{r}} \\
+    \Delta x_{23_{r}} \\
+    v_{1_{r}}
+  \end{bmatrix}
+\end{equation}
+
+Now, leverage the similarity transform to define the error state dynamics.
+\begin{align}
+  \dot{\vec{x}}_{e} &= T A_{s} T^{-1} \vec{x}_{e} + T B_{s} \vec{u} \\
+  y &= C T^{-1} \vec{x}_{e} + D \vec{u}
+\end{align}
+
+Finally, clean up the equation by redefining the system.
+\begin{align*}
+  \vec{x} &\coloneqq \vec{x}_{e}    \\
+  A       &\coloneqq T A_{s} T^{-1} \\
+  B       &\coloneqq T B_{s}        \\
+  C       &\coloneqq C_{s} T^{-1}   \\
+  D       &\coloneqq D
+\end{align*}
+
+Now the system is in the standard form.
+\begin{align}
+  \dot{\vec{x}} &= A \vec{x} + B \vec{u} \\
+  y &= C \vec{x} + D \vec{u}
+\end{align}
 %%% ----------------------------------------------------------------------
 \section{Simulation}
 
