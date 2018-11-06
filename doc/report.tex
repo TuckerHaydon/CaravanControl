@@ -78,7 +78,9 @@ Each truck may be independently controlled and may be instructed to either
 accelerate or decelerate.
 
 %%% ----------------------------------------------------------------------
-\section{System Description}
+\section{Nominal System Description}
+\label{sec:nominal_system}
+
 Define the system state.
 \begin{equation}
   \vec{x} = 
@@ -92,19 +94,7 @@ Define the system state.
   \end{bmatrix}
 \end{equation}
 
-Define the reference states.
-\begin{equation}
-  \vec{x_{r}} = 
-  \begin{bmatrix}
-    \Delta x_{12_{r}} \\
-    \Delta x_{23_{r}} \\
-    v_{1_{r}}         \\
-    \Delta v_{12_{r}} \\
-    \Delta v_{23_{r}}
-  \end{bmatrix}
-\end{equation}
-
-Define the input vector.
+Define the system input.
 \begin{equation}
   \vec{u} = 
   \begin{bmatrix}
@@ -114,21 +104,179 @@ Define the input vector.
   \end{bmatrix}
 \end{equation}
 
-Define the error state and stack it on top of the reference signal.
+Define the system dynamics.
 \begin{equation}
-  \vec{e} = 
+  \dot{\vec{x}}
+  =
+  \begin{bmatrix}
+    v_{1} \\
+    v_{2} \\
+    v_{3} \\
+    a_{1} \\
+    a_{2} \\
+    a_{3}
+  \end{bmatrix}
+  =
+  \underbrace{
+  \begin{bmatrix}
+    0 & 0 & 0 & 1 & 0 & 0  \\
+    0 & 0 & 0 & 0 & 1 & 0  \\
+    0 & 0 & 0 & 0 & 0 & 1  \\
+    0 & 0 & 0 & 0 & 0 & 0  \\
+    0 & 0 & 0 & 0 & 0 & 0  \\
+    0 & 0 & 0 & 0 & 0 & 0  \\
+  \end{bmatrix}
+  }_{A}
+  \vec{x}
+  +
+  \underbrace{
+  \begin{bmatrix}
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    1 & 0 & 0 \\
+    0 & 1 & 0 \\
+    0 & 0 & 1 \\
+  \end{bmatrix}
+  }_{B}
+  \vec{u}
+\end{equation}
+
+Define the system observer.
+\begin{equation}
+  \vec{y} = 
   \begin{bmatrix}
     x_{1}             \\
     \Delta x_{12}     \\
     \Delta x_{23}     \\
-    v_{1}             \\
-    \Delta v_{12}     \\
-    \Delta v_{23}     \\ 
+    a_{1}             \\
+    a_{2}             \\
+    a_{3}             
+  \end{bmatrix}
+  =
+  \underbrace{
+  \begin{bmatrix}
+    1 & 0 & 0 & 0 & 0 & 0   \\
+    1 & -1 & 0 & 0 & 0 & 0  \\
+    0 & 1 & -1 & 0 & 0 & 0  \\
+    0 & 0 & 0 & 0 & 0 & 0   \\
+    0 & 0 & 0 & 0 & 0 & 0   \\
+    0 & 0 & 0 & 0 & 0 & 0  
+  \end{bmatrix}
+  }_{C}
+  \vec{x}
+  +
+  \underbrace{
+  \begin{bmatrix}
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    1 & 0 & 0 \\
+    0 & 1 & 0 \\
+    0 & 0 & 1
+  \end{bmatrix}
+  }_{D}
+  \vec{u}
+\end{equation}
+
+\subsection{Observability}
+Using the nominal system, determine whether or not the system is observable. The
+nominal system is linear and time-invariant, so the observability Grammian is
+simplified:
+
+\begin{equation}
+  W_{o} = 
+  \begin{bmatrix}
+    C      \\
+    CA     \\
+    CA^2   \\
+    \vdots \\
+    CA^{n-1}
+  \end{bmatrix}
+\end{equation}
+
+If the rank of $W_{o} = n$ then the system is observable. \textbf{The nominal
+system is observable}.
+
+
+\subsection{Controllability}
+Using the nominal system, determine whether or not the system is controllable. The
+nominal system is linear and time-invariant, so the controllability Grammian is
+simplified:
+
+\begin{equation}
+  W_{c} = 
+  \begin{bmatrix}
+    B & AB & A^2B & \hdots & A^{n-1}N
+  \end{bmatrix}
+\end{equation}
+
+If the rank of $W_{c} = n$ then the system is controllable. \textbf{The nominal
+system is controllable}.
+
+\subsection{Conclusion}
+The fact that the nominal system is both observable and controllable indicates
+that it is well-designed and amenable to both estimation and control.
+
+
+%%% ----------------------------------------------------------------------
+\section{Estimator}
+TODO Connor
+
+%%% ----------------------------------------------------------------------
+\section{Control System}
+Controllers drive systems to the origin. The nominal system, however, should not
+be driven to the origin. Instead an error-state system should be specified where
+the error is the deviation of the nominal system from a reference signal.
+
+First, define the reference signal. From the problem statement, the goal is to
+maintain a specified distance between the trucks and to keep that at a constant
+velocity.
+\begin{equation}
+  \vec{x_{r}} = 
+  \begin{bmatrix}
+    x_{1_{r}}         \\
     \Delta x_{12_{r}} \\
     \Delta x_{23_{r}} \\
     v_{1_{r}}         \\
-    \Delta v_{12_{r}} \\
-    \Delta v_{23_{r}}
+    v_{2_{r}}         \\
+    v_{3_{r}}
+  \end{bmatrix}
+\end{equation}
+
+The error signal is the difference between the nominal and the reference state.
+\begin{equation}
+  \vec{x_{e}} = 
+  \begin{bmatrix}
+    x_{1} - x_{1_{r}}                 \\ 
+    x_{1} - x_{2} - \Delta x_{12_{r}} \\
+    x_{2} - x_{3} - \Delta x_{23_{r}} \\
+    v_{1} - v_{1_{r}}                 \\
+    v_{2} - v_{2_{r}}                 \\
+    v_{3} - v_{3_{r}}
+  \end{bmatrix}
+\end{equation}
+
+The error signal is an affine transform using both the nominal state and the
+reference signal. The state dynamics for an affine transform don't conform to
+the standard $\dot{x} = Ax + Bu$ form. However, the standard form can be
+composed via the following trick: append the reference signal to the nominal
+state and define zero dynamics and full observability for the reference
+substate.
+
+Define the error state and stack it on top of the reference signal. 
+\begin{equation}
+  \vec{e} = 
+  \begin{bmatrix}
+    x_{1}             \\
+    x_{2}             \\
+    x_{3}             \\
+    v_{1}             \\
+    v_{2}             \\
+    v_{3}             \\ 
+    \Delta x_{12_{r}} \\
+    \Delta x_{23_{r}} \\
+    v_{1_{r}}         \\
   \end{bmatrix}
 \end{equation}
 
@@ -235,12 +383,6 @@ Define the error state observer equations.
   }_{D}
   \vec{u}
 \end{equation}
-
-
-%%% ----------------------------------------------------------------------
-\section{Analysis}
-
-
 %%% ----------------------------------------------------------------------
 \section{Simulation}
 
