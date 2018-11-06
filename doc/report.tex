@@ -36,6 +36,8 @@
 \parindent = 0 mm
 \parskip = 4 mm 
 
+\setcounter{MaxMatrixCols}{15}
+
 %%% ----------------------------------------------------------------------
 \begin{document}
 \title[]{Feedback Control Systems Final Report \\ Caravan Control}
@@ -50,12 +52,189 @@
 
 
 %%% ----------------------------------------------------------------------
-\section{Introduction}
-This is me citing a paper \cite{kalman1960new}.
+\section{Scenario}
+You are an engineer in charge of designing and implementing an estimation and
+control system for a fleet of self-driving semi-trucks. Due to government
+regulation, the truck fleet can only operate in the self-driving mode when they
+are on long, straight stretches of highway between cities. In order to reduce
+costs and conserve fuel, the trucks drive very closely together at a
+pre-determined speed in `caravan formation'. By driving very closely together,
+the trucks can draft off of one another, reduce drag, and save fuel by upwards
+of 21\% \cite{bonnet2000fuel}.
 
+For the system you are designing, only three trucks will be in the caravan. The
+caravan is equipped with the following sensor suite: 
+\begin{enumerate}
+  \item The lead truck is equipped with a GPS receiver that measures its
+    position at 1 Hz.
+  \item The two following trucks are equipped with range sensors that measure
+    the relative position between themselves and the truck in front of them at
+    10 Hz.
+  \item All three trucks are equipped with an IMU that measures respective
+    acceleration at 100 Hz.
+\end{enumerate}
+
+Each truck may be independently controlled and may be instructed to either
+accelerate or decelerate.
 
 %%% ----------------------------------------------------------------------
 \section{System Description}
+Define the system state.
+\begin{equation}
+  \vec{x} = 
+  \begin{bmatrix}
+    x_{1} \\
+    x_{2} \\
+    x_{3} \\
+    v_{1} \\
+    v_{2} \\
+    v_{3}
+  \end{bmatrix}
+\end{equation}
+
+Define the reference states.
+\begin{equation}
+  \vec{x_{r}} = 
+  \begin{bmatrix}
+    \Delta x_{12_{r}} \\
+    \Delta x_{23_{r}} \\
+    v_{1_{r}}         \\
+    \Delta v_{12_{r}} \\
+    \Delta v_{23_{r}}
+  \end{bmatrix}
+\end{equation}
+
+Define the input vector.
+\begin{equation}
+  \vec{u} = 
+  \begin{bmatrix}
+    a_{1} \\
+    a_{2} \\
+    a_{3}
+  \end{bmatrix}
+\end{equation}
+
+Define the error state and stack it on top of the reference signal.
+\begin{equation}
+  \vec{e} = 
+  \begin{bmatrix}
+    x_{1}             \\
+    \Delta x_{12}     \\
+    \Delta x_{23}     \\
+    v_{1}             \\
+    \Delta v_{12}     \\
+    \Delta v_{23}     \\ 
+    \Delta x_{12_{r}} \\
+    \Delta x_{23_{r}} \\
+    v_{1_{r}}         \\
+    \Delta v_{12_{r}} \\
+    \Delta v_{23_{r}}
+  \end{bmatrix}
+\end{equation}
+
+Define the error state dynamics.
+\begin{equation}
+  \dot{\vec{e}} = 
+  \begin{bmatrix}
+    v_{1}             \\
+    \Delta v_{12}     \\
+    \Delta v_{23}     \\
+    a_{1}             \\
+    \Delta a_{12}     \\
+    \Delta a_{23}     \\ 
+    0                 \\
+    0                 \\
+    0                 \\
+    0                 \\
+    0                
+  \end{bmatrix}
+  =
+  \underbrace{
+  \begin{bmatrix}
+    0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0
+  \end{bmatrix}
+  }_{A}
+  \vec{e}
+  +
+  \underbrace{
+  \begin{bmatrix}
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    1 & 0 & 0 \\
+    1 & -1 & 0 \\
+    0 & 1 & -1 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0
+  \end{bmatrix}
+  }_{B}
+  \vec{u}
+\end{equation}
+
+Define the error state observer equations.
+\begin{equation}
+  \vec{y} = 
+  \begin{bmatrix}
+    x_{1}             \\
+    \Delta x_{12}     \\
+    \Delta x_{23}     \\
+    a_{1}             \\
+    a_{2}             \\
+    a_{3}             \\
+    \Delta x_{12_{r}} \\
+    \Delta x_{23_{r}} \\
+    v_{1_{r}}         \\
+    \Delta v_{12_{r}} \\
+    \Delta v_{23_{r}}
+  \end{bmatrix}
+  =
+  \underbrace{
+  \begin{bmatrix}
+    1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1
+  \end{bmatrix}
+  }_{C}
+  \vec{e}
+  +
+  \underbrace{
+  \begin{bmatrix}
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    1 & 0 & 0 \\
+    0 & 1 & 0 \\
+    0 & 0 & 1 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 \\
+    0 & 0 & 0 
+  \end{bmatrix}
+  }_{D}
+  \vec{u}
+\end{equation}
 
 
 %%% ----------------------------------------------------------------------
