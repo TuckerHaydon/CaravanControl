@@ -1,4 +1,4 @@
-function [M] = GenerateSensorMeasurements(S, P, C, t)
+function [M] = GenerateSensorMeasurements(S, P, C, T)
 %% GenerateSensorMeasurements
 % Author: 
 %   Tucker Haydon, Connor Brashar
@@ -8,7 +8,7 @@ function [M] = GenerateSensorMeasurements(S, P, C, t)
 %   S - Struct containing true system state at current time
 %   P - Struct containing sensor parameters at current time
 %   C - Struct containing the zero-order hold on the last control input
-%   t - scalar representing current time
+%   T - Struct containing time information
 % Return Values:
 %   M - Struct containing system measurements at current time
 % Notes:
