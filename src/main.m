@@ -59,6 +59,24 @@ for idx = 1:1:length(TIME.t_vec)
     % Feed sensor measurements into kalman filter to generate a state estimate
 %     [estimated_state] = ...
 %         FilterState(estimated_state, sensor_measurements, filter_parameters, TIME);
+% Note from Connor: We need to pass the control accelerations into this.
+% It's the only way to get a linear estimate of the acceleration without
+% differentiating velocity, which would not be a linear KF. I've got it in
+% the FilterState function.
+% Other notes:
+%   1. The KF noise has been... sketchily made. We should discuss. Having
+%   done it with working at MITRE, a true model for the measurement noises
+%   for this model is less trivial than we may want it to be. I've made
+%   some simplifying assumptions for our KF that prevent accel meas error
+%   from affecting vel error, or pos, but since they're all technically
+%   related, this is technically untrue.
+%   2. In order to accomodate acceleration measurements, I create a
+%   separate stacked state for the measurement update, which was a blast to
+%   write, and I think should work. Looks hawt.
+%   3. I can't actually test this code without generating measurements.
+%   There shouldn't be much in the way of error *knocks on wood* but I'm
+%   sure there's something that'll need debugging when we have the ability
+%   to feed states in.
 
 
     %% Generate control inputs
