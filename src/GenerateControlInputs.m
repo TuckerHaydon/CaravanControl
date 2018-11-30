@@ -16,7 +16,7 @@ function [U] = GenerateControlInputs(S, P, TIME)
 
 %% Setup
 % Restructure system to conform to control definitions
-persistent HAS_CONVERTED_SYSTEM A B C D T
+persistent HAS_CONVERTED_SYSTEM A B C D T DISCRETE_SYS
 if isempty(HAS_CONVERTED_SYSTEM)
 
     % Stacked system
@@ -55,16 +55,25 @@ if isempty(HAS_CONVERTED_SYSTEM)
     C = C_s * inv(T);
     D = D_s;
     
+    SYS = ss(A, B, C, D);
+    DISCRETE_SYS = c2d(SYS, TIME.DT);
+    
     HAS_CONVERTED_SYSTEM = 1; 
 end
 
 %% Function
 % Use control definition of system
-P.SYS.A = A;
-P.SYS.B = B;
-P.SYS.C = C;
-P.SYS.D = D;
+P.SYS.A = DISCRETE_SYS.A;
+P.SYS.B = DISCRETE_SYS.B;
+P.SYS.C = DISCRETE_SYS.C;
+P.SYS.D = DISCRETE_SYS.D;
 
-U = P.control_law(S, P, TIME);
+% Use the control definition of state
+S_s = T * [
+    S;
+    P.ref;
+];
+
+U = P.control_law(S_s, P, TIME);
 
 end

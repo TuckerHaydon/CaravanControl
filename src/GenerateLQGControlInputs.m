@@ -5,7 +5,7 @@ function [U] = GenerateLQGControlInputs(S, P, TIME)
 % Description:
 %   Generate contol inputs for the system using an LQG controller
 % Parameters:
-%   S - Struct containing estimated system state at current time
+%   S - Vector containing estimated system state at current time
 %   P - Struct containing control parameters at current time
 %       - SYS - Struct containing control system parameters
 %       - ref - 3x1 reference signal
@@ -21,8 +21,8 @@ if isempty(HAS_SOLVED_DARE)
     % LQG state weighting matrix
     Q = [
         zeros(1,0),      zeros(1,1),    zeros(1,8);
-        zeros(2,1),    0.1 * eye(2),    zeros(2,6);
-        zeros(1,3),    0.1 * eye(1),    zeros(1,5);
+        zeros(2,1),      eye(2),        zeros(2,6);
+        zeros(1,3),      eye(1),        zeros(1,5);
         zeros(5,9),      zeros(5,0),    zeros(5,0);
      ];
 
@@ -36,6 +36,7 @@ if isempty(HAS_SOLVED_DARE)
     
     % Solve the discrete-time differential riccati equation
     % https://stanford.edu/class/ee363/lectures/dlqr.pdf
+    % See also: https://stanford.edu/class/ee363/lectures/allslides.pdf
     nx = size(P.SYS.A, 1);
     nu = size(P.SYS.B, 2);
     P_DARE_MAT = zeros(nx,nx,TIME.N);
@@ -58,7 +59,6 @@ if isempty(HAS_SOLVED_DARE)
 end
 
 %% Function
-    U = 0;
-%     U = K_DARE_MAT(:,:,TIME.idx) * S.x;
+    U = K_DARE_MAT(:,:,TIME.idx) * S;
 
 end
