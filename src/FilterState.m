@@ -21,12 +21,10 @@ B = [zeros(3,6); zeros(3), eye(3)];
 
 % Matrices from z = Cx + Du
 Cul = [1,0,0; 1,-1,0; 0,1,-1];
-Cm = [Cul, zeros(3); zeros(3,6)];
-D = B;
 
 % States and Controls
-Xk = [S.x; S.v];
-Uk = [zeros(3,1); C.a];
+Xk = S.x;
+Uk = [zeros(3,1); C];
 
 % Noises -- I'm gonna note that these noise values come from the sensor
 % measurements, but the update rates aren't quite right... we simply assume
@@ -39,46 +37,40 @@ v_std = 5; % 10x the acceleration error, because we int. 10 accel samples
 Fk = expm(A*dt);
 % Gk is given by: int(expm(A*s),s,0,dt)*B, but since it's a constant, I'm
 % writing it in to save some silicon
-Gk = [zeros(3), eye(3)./20000; zeros(3), eye(3)./100];
-Qk = [x_std^2 .* eye(3), zeros(3); zeros(3); v_std^2 .* eye(3)];
+Gk = [zeros(3), eye(3)./200; zeros(3), eye(3)./10];
+DTQM = [1/20 * dt^5, 1/8 * dt^4, 1/6 * dt^3; ...
+        1/8 * dt^4,  1/3 * dt^3, 1/2 * dt^2; ...
+        1/6 * dt^3,  1/2 * dt^2,         dt];
+Qk = [DTQM./10, zeros(3); zeros(3), DTQM./20];
 
-% To get the measurement vectors, we stack the state with control inputs
-% for a new input vector--else we can't accomodate acceleration without
-% nonlinear integration of terms
-Hk = [Cul, zeros(3,6); zeros(6,3), eye(3)]; 
+Hk = [Cul, zeros(3)];
 
 % Z has a varied length depending on what timestep we are on, because of
 % the different update rates of different components. We will propagate a
 % posteriori updates only for each measurement we actually have, but
 % we will propagate a priori updates for each step regardless.
-if exist(M.x)
-    Zk = [M.x; M.dx; M.a];
-    Rk = diag([diag(Qk); 0.5; 0.5; 0.5]);
-elseif exist(M.dx)
-    Zk = [M.dx; M.a];
-    Rk = Qk;
+if isfield(M,'x')
+    Zk = [M.x; M.dx];
+    Rk = diag([3; 5; 5]);
+elseif isfield(M,'dx')
+    Zk = [M.dx];
+    Rk = diag([5; 5]);
     Hk = Hk(2:end,:);
-else
-    Zk = M.a;
-    Rk = x_std^2 .* eye(3);
-    Hk = Hk(4:end,:);
 end
 
 %% Function
 % A priori Measurements
 xbar = Fk*Xk + Gk*Uk;
-Pbar = Fk*S.P*Fk' + Q; % 6x6
+Pbar = Fk*S.P*Fk' + Qk;
 
 % Measurement 
-zbar = Hk*[xbar; C.a]; % State stacked on control for measurements
-Hk = Hk(:,1:6); % Adjust back to correct dimensionality for real state
+zbar = Hk*xbar; % State stacked on control for measurements=
 
 % A Posteriori Measurements
 xhat = xbar + (Pbar*Hk') * inv(Hk*Pbar*Hk' + Rk) * (Zk - zbar);
-P = Pbar - Pbar * Hk' * inv(Hk*Pbar*Hk' + R) * (Hk * Pbar);
+P = Pbar - (Pbar*Hk') * inv(Hk*Pbar*Hk' + Rk) * (Hk * Pbar');
 
-ES.x = xhat(1:3);
-ES.v = xhat(4:6);
-ES.P = P;
+FS.x = xhat;
+FS.P = P;
 
-return ES;
+end
