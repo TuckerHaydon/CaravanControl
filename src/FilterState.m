@@ -53,6 +53,10 @@ if isfield(M,'x')
     Zk = [M.x; M.dx];
     Rk = diag([3; 5; 5]);
 elseif isfield(M,'dx')
+    % Attempt with inf variance
+%     Zk = [0; M.dx];
+%     Rk = diag([inf; 5; 5]);
+    % Regular attempt
     Zk = [M.dx];
     Rk = diag([5; 5]);
     Hk = Hk(2:end,:);
@@ -67,8 +71,10 @@ Pbar = Fk*S.P*Fk' + Qk;
 zbar = Hk*xbar; % State stacked on control for measurements=
 
 % A Posteriori Measurements
-xhat = xbar + (Pbar*Hk') * inv(Hk*Pbar*Hk' + Rk) * (Zk - zbar);
-P = Pbar - (Pbar*Hk') * inv(Hk*Pbar*Hk' + Rk) * (Hk * Pbar');
+Pzz = Hk*Pbar*Hk' + Rk;
+W = Pbar*Hk'*inv(Pzz);
+xhat = xbar + W * (Zk - zbar);
+P = Pbar - W*Pzz*W';
 
 FS.x = xhat;
 FS.P = P;
