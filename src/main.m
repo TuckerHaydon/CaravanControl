@@ -74,8 +74,8 @@ for idx = 1:1:TIME.N
     
     %% Generate sensor measurements
     % Given the current true state, generate sensor measurements
-    [sensor_measurements] = ...
-        GenerateSensorMeasurements(state, sensor_params, TIME);
+%     [sensor_measurements] = ...
+%         GenerateSensorMeasurements(state, sensor_params, TIME);
 
 
     %% Filter sensor measurements

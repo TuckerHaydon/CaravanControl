@@ -3,7 +3,7 @@
 
 \documentclass[12pt,onecolumn,reqno]{amsart}
 \usepackage{subcaption,wrapfig,graphicx,booktabs,fancyhdr,amsmath,amsfonts}
-\usepackage{cite,bm,amssymb,amsthm,wasysym,url,multirow,float,mathtools}
+\usepackage{cite,bm,amssymb,amsthm,wasysym,url,multirow,float,mathtools,hyperref}
 \newcommand{\vb}{\boldsymbol}
 \newcommand{\vbh}[1]{\hat{\boldsymbol{#1}}}
 \newcommand{\vbb}[1]{\bar{\boldsymbol{#1}}}
@@ -220,11 +220,12 @@ that it is well-designed and amenable to both estimation and control.
 
 
 %%% ----------------------------------------------------------------------
-\section{Estimator}
+\section{Estimator} \label{sec:kalman_filter}
 TODO Connor
 
 %%% ----------------------------------------------------------------------
 \section{Control System Description}
+\subsection{Error State System}
 Controllers drive systems to the origin. The nominal system, however, should not
 be driven to the origin. Instead an error-state system should be specified where
 the error is the deviation of the nominal system from a reference signal.
@@ -255,13 +256,11 @@ Note that not all states have a corresponding reference signal.
   \end{bmatrix}
 \end{equation}
 
-The error signal is an affine transform using both the nominal state and the
-reference signal. The error signal dynamics don't conform to the standard
-$\dot{x} = Ax + Bu$ form --- there is an affine transform between the error
-dynamics and the nominal and reference signals. However, the standard form can
-be composed via the following trick: append the reference signal to the nominal
-state and define zero dynamics and full observability for the reference
-substate.
+The error signal dynamics don't conform to the standard $\dot{x} = Ax + Bu$ form
+--- there is an affine transform between the error dynamics and the nominal and
+reference signals. However, the standard form can be composed via the following
+trick: append the reference signal to the nominal state and define zero dynamics
+and full observability for the reference substate.
 
 Stack the nominal and reference states into the \textit{stacked state}.
 \begin{equation}
@@ -375,7 +374,7 @@ specified and fully known so there is full state feedback for these states.
 Now define the error state by linearly transforming the stacked state via a
 \textit{similiarity transform}.
 
-\begin{equation}
+\begin{equation*}
   \vec{x}_{e} = 
   \begin{bmatrix}
     x_{1}               \\
@@ -413,13 +412,13 @@ Now define the error state by linearly transforming the stacked state via a
     \Delta x_{23_{r}} \\
     v_{1_{r}}
   \end{bmatrix}
-\end{equation}
+\end{equation*}
 
 Now, leverage the similarity transform to define the error state dynamics.
-\begin{align}
+\begin{align*}
   \dot{\vec{x}}_{e} &= T A_{s} T^{-1} \vec{x}_{e} + T B_{s} \vec{u} \\
   y &= C T^{-1} \vec{x}_{e} + D \vec{u}
-\end{align}
+\end{align*}
 
 Finally, clean up the equation by redefining the system.
 \begin{align*}
@@ -431,16 +430,133 @@ Finally, clean up the equation by redefining the system.
 \end{align*}
 
 Now the system is in the standard form.
-\begin{align}
+\begin{align*}
   \dot{\vec{x}} &= A \vec{x} + B \vec{u} \\
   y &= C \vec{x} + D \vec{u}
-\end{align}
+\end{align*}
+
+
+\subsection{Discrete-Time Dynamics}
+Software implementations of continuous kinematic systems must first discretize
+the system dynamics. Many sensors and computers cannot produce nor consume
+continuous signals. As a result, system dynamics or measurements are
+represented as discrete systems. 
+
+As the system is LTI, 
+
+
+
+\subsection{Discrete-Time LQR Controller}
+
+
+Together, a Kalman Filter and LQR controller form a Linear-Quadratic-Gaussian
+(LQG) controller. 
+
+
 %%% ----------------------------------------------------------------------
 \section{Simulation}
+The LQG controller was implemented in Matlab. The goal of the controller is to
+bring the trucks into the 'caravan' formation where the trucks follow each other
+at 30 meters/second with a separation of only 5 meters.
+
+\begin{equation*}
+  \vec{x}_{r} = 
+  \begin{bmatrix}
+    \Delta x_{12} \\ 
+    \Delta x_{23} \\ 
+    v_{1}
+  \end{bmatrix} 
+  =
+  \begin{bmatrix}
+    5 \\
+    5 \\
+    30
+  \end{bmatrix} 
+\end{equation*}
 
 
 %%% ----------------------------------------------------------------------
-\section{Results}
+\section{Discussion}
+The LQG 
+
+
+%%% ----------------------------------------------------------------------
+\section{Museum Exhibit}
+The following section describes a potential museum exhibit aimed at high-school
+and middle-school children.
+
+Note that this section is an abridged version of the original project proposal.
+In discussion with Dr. Tanaka, we agreed that the primary portion of the project
+would be the design, implementation, and simulation of an LQG controller and
+that, to make grading easier, we would try to conform to the original project
+proposal.
+
+\subsection{Description}
+We propose a museum exhibit composed of toy trains on tracks where visitors
+attempt to tune an LQR controller to bring three independent locomotives into
+the caravan formation. On a 3 meter by 3 meter tables, toy train tracks are laid
+out in a wide circle \footnote {The hope is that a wide circle will
+approximately represent a long, straight, endless track}. Three battery-powered
+locomotives may be placed anywhere on the tracks. Visitors may turn 6 knobs
+corresponding to the 6 diagonal entries of the LQR weighting matrices to tune
+the system.
+
+
+\subsection{Implementation}
+Visitors may walk around all sides of the table. On one side of the table are
+six knobs that visitors may twist to tune the LQR controller. On the far end of
+the table opposite the knobs is a TV. The TV first shows a short 30-second video
+describing the goal of the exhibit, what a 'good' controller looks like, and
+what each of the 6 knobs do. Visitors are then free to twist the knobs (a
+digital value is displayed on the screen), and then press the 'go' button.
+
+Behind the scenes, a Raspberry Pi B+ (RPB) controls the three locomotives. The
+locomotives have been 'hacked' and carry a Raspberry Pi Zero (RPZ) that
+modulates the supplied battery voltage to each of the locomotives. By modulating
+the battery voltage, the RPZ can directly control the speed of each of the
+locomotives. Each of the RPZs carry an inertial measurement unit that measures
+the acceleration of each of the locomotives. The RPZs transmit the acceleration
+data to the RPB via wifi. A camera is suspended above the table and connected to
+the RPB. The RPB uses an image processing algorithm on the incoming camera data
+to track the location of each of the locomotives and generate the position and
+position difference measurements. The RPB fuses the camera measurements and the
+accelerometer measurements together with the kalman filter described in section
+\ref{sec:kalman_filter}.
+
+After the 'go' button is pressed, the RPB reads in the current analog knob
+values and solves the discrete-time algebraic riccati equation. Once solved, the
+RPB streams control input commands to the RPZs via wifi. The RPZs convert the
+control input into motor voltages and drive the locomotives. 
+
+If the camera detects that two locomotives have touched (i.e. a crash has
+occurred), the trains are stopped, and the visitor is notified of the crash and
+given another chance.
+
+
+\subsection{Price Breakdown}
+\begin{center}
+  \begin{tabular} { || l c || }
+    \hline
+    Item & Total Price \\ [0.5ex] 
+    \hline\hline
+    2 Wooden Train Track          & \$100 \\
+    3 Battery-Powered Locomotives & \$150 \\
+    1 Raspberry Pi B+             & \$40  \\
+    1 Wifi Dongle                 & \$15  \\
+    1 Raspberry Pi Camera Module  & \$25  \\
+    3 Raspberry Pi Zero W         & \$30  \\
+    3 IMU Sensors                 & \$45  \\
+    3 PWM Motor Shields           & \$120  \\
+    1 LCD TV                      & \$300 \\ 
+    6 Knobs and 1 button          & \$50  \\
+    \hline
+    Total Price                   & \$875 \\
+    \hline
+  \end{tabular}
+\end{center}
+
+\section{Work Contribution}
+Both Connor Brashar and Tucker Haydon contributed equally to this project.
 
 
 %%% ----------------------------------------------------------------------
