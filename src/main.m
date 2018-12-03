@@ -29,7 +29,7 @@ x_0 = [200, 75, 0, 30, 27, 25]';
 state_history = zeros(size(x_0, 1), TIME.N);
 state_history(:, TIME.idx) = x_0;
 est_error_history = state_history;
-cov_history = zeros(size(x_0, x_0), TIME.N);
+cov_history = zeros(size(x_0, 1), size(x_0,1), TIME.N);
 
 input_history = zeros(3, TIME.N);
 
@@ -74,8 +74,8 @@ for idx = 1:1:TIME.N
     
     %% Generate sensor measurements
     % Given the current true state, generate sensor measurements
-%     [sensor_measurements] = ...
-%         GenerateSensorMeasurements(state, sensor_params, TIME);
+    [sensor_measurements] = ...
+        GenerateSensorMeasurements(state, sensor_params, TIME);
 
 
     %% Filter sensor measurements
@@ -231,47 +231,48 @@ hold off;
 
 suptitle('Estimation Error over time');
 
-% Plot Estimator Error
+% Plot Estimator Covariances
 figure();
 hold on;
 
 subplot(2, 3, 1);
-plot(TIME.t_vec, cov_history(1,1,:));
+plot(TIME.t_vec, squeeze(cov_history(1,1,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{1}$', 'Interpreter','latex');
+
 title('$\Delta x_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
 subplot(2, 3, 2);
-plot(TIME.t_vec, cov_history(2,2,:));
+plot(TIME.t_vec, squeeze(cov_history(2,2,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{2}$', 'Interpreter','latex');
 title('$\Delta x_{2}$ vs Time', 'Interpreter','latex');
 grid on;
 
 subplot(2, 3, 3);
-plot(TIME.t_vec, cov_history(3,3,:));
+plot(TIME.t_vec, squeeze(cov_history(3,3,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{3}$', 'Interpreter','latex');
 title('$\Delta x_{3}$ vs Time', 'Interpreter','latex');
 grid on;
 
 subplot(2, 3, 4);
-plot(TIME.t_vec, cov_history(4,4,:));
+plot(TIME.t_vec, squeeze(cov_history(4,4,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{1}$', 'Interpreter','latex');
 title('$\Delta v_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
 subplot(2, 3, 5);
-plot(TIME.t_vec, cov_history(5,5,:));
+plot(TIME.t_vec, squeeze(cov_history(5,5,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{2}$', 'Interpreter','latex');
 title('$\Delta v_{2}$ vs Time', 'Interpreter','latex');
 grid on;
 
 subplot(2, 3, 6);
-plot(TIME.t_vec, cov_history(6,6,:));
+plot(TIME.t_vec, squeeze(cov_history(6,6,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{3}$', 'Interpreter','latex');
 title('$\Delta v_{3}$ vs Time', 'Interpreter','latex');
