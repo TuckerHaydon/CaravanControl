@@ -64,8 +64,8 @@ for idx = 1:1:TIME.N
 
     %% Filter sensor measurements
     % Feed sensor measurements into kalman filter to generate a state estimate
-%     [estimated_state] = ...
-%         FilterState(estimated_state, sensor_measurements, filter_parameters, control_inputs, TIME);
+    [estimated_state] = ...
+        KalmanFilter(estimated_state, sensor_measurements, filter_parameters, control_inputs, TIME);
 % Note from Connor: We need to pass the control accelerations into this.
 % It's the only way to get a linear estimate of the acceleration without
 % differentiating velocity, which would not be a linear KF. I've got it in
