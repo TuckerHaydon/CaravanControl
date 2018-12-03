@@ -16,7 +16,7 @@ function [U] = GenerateLQGControlInputs(S, P, TIME)
 persistent HAS_SOLVED_DARE P_DARE_MAT K_DARE_MAT R Q Qf
 if isempty(HAS_SOLVED_DARE)
     % LQG input weighting matrix
-    R = 10*eye(3);
+    R = 5000*eye(3);
 
     % LQG state weighting matrix
     Q = [
