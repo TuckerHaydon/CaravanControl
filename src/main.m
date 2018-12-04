@@ -111,8 +111,8 @@ for idx = 1:1:TIME.N
     control_parameters.SYS = SYS;
     control_parameters.ref = reference_signal;
     control_parameters.control_law = control_law;
-%     [control_inputs] = ...
-%         GenerateControlInputs(state, control_parameters, TIME);
+    [control_inputs] = ...
+        GenerateControlInputs(state, control_parameters, TIME);
 
 
     %% Propogate true state
@@ -239,7 +239,7 @@ subplot(2, 3, 1);
 plot(TIME.t_vec, squeeze(cov_history(1,1,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{1}$', 'Interpreter','latex');
-
+ylim([-1000,1000]);
 title('$\Delta x_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -247,6 +247,7 @@ subplot(2, 3, 2);
 plot(TIME.t_vec, squeeze(cov_history(2,2,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{2}$', 'Interpreter','latex');
+ylim([-1000,1000]);
 title('$\Delta x_{2}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -254,6 +255,7 @@ subplot(2, 3, 3);
 plot(TIME.t_vec, squeeze(cov_history(3,3,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{3}$', 'Interpreter','latex');
+ylim([-1000,1000]);
 title('$\Delta x_{3}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -261,6 +263,7 @@ subplot(2, 3, 4);
 plot(TIME.t_vec, squeeze(cov_history(4,4,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{1}$', 'Interpreter','latex');
+ylim([-1000,1000]);
 title('$\Delta v_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -275,6 +278,7 @@ subplot(2, 3, 6);
 plot(TIME.t_vec, squeeze(cov_history(6,6,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{3}$', 'Interpreter','latex');
+ylim([-1000,1000]);
 title('$\Delta v_{3}$ vs Time', 'Interpreter','latex');
 grid on;
 
