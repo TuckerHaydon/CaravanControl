@@ -30,8 +30,6 @@ Uk = [zeros(3,1); C];
 % measurements, but the update rates aren't quite right... we simply assume
 % this error at every point in time, for any measurement (which is a way,
 % but not the only way, to do this)
-x_std = 3; % 3m error from GPS
-v_std = 5; % 10x the acceleration error, because we int. 10 accel samples
 
 %% Kalman Filter Variables
 Fk = expm(A*dt);
@@ -51,14 +49,14 @@ Hk = [Cul, zeros(3)];
 % we will propagate a priori updates for each step regardless.
 if isfield(M,'x')
     Zk = [M.x; M.dx];
-    Rk = diag([3; 5; 5]);
+    Rk = diag([3; 1; 1]);
 elseif isfield(M,'dx')
     % Attempt with inf variance
 %     Zk = [0; M.dx];
 %     Rk = diag([inf; 5; 5]);
     % Regular attempt
     Zk = [M.dx];
-    Rk = diag([5; 5]);
+    Rk = diag([1; 1]);
     Hk = Hk(2:end,:);
 end
 

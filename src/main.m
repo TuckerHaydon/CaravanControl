@@ -7,7 +7,7 @@ tic;
 
 % Time information
 % Clock progresses at 100 ticks/second
-TIME.T_MAX_SECONDS = 10*60;
+TIME.T_MAX_SECONDS = 5*60;
 TIME.DT = 1/10;
 TIME.N = TIME.T_MAX_SECONDS / TIME.DT;
 TIME.t_vec = TIME.DT:TIME.DT:TIME.T_MAX_SECONDS;
@@ -68,7 +68,7 @@ for idx = 1:1:TIME.N
     %% First step, no control
     if idx == 1
         control_inputs = zeros(3,1);
-        state_estimate.x = x_0;
+        state_estimate.x = zeros(6,1);
         state_estimate.P = 10*eye(6);
     end
     
@@ -80,29 +80,11 @@ for idx = 1:1:TIME.N
 
     %% Filter sensor measurements
     % Feed sensor measurements into kalman filter to generate a state estimate
-    state_estimate = FilterState(state_estimate, sensor_measurements, sensor_params, control_inputs, TIME);
-
+    state_estimate = ...
+        FilterState(state_estimate, sensor_measurements, sensor_params, control_inputs, TIME);
     est_error_history(:,idx) = state_estimate.x - state;
     cov_history(:,:,idx) = state_estimate.P;
-    
-% Note from Connor: We need to pass the control accelerations into this.
-% It's the only way to get a linear estimate of the acceleration without
-% differentiating velocity, which would not be a linear KF. I've got it in
-% the FilterState function.
-% Other notes:
-%   1. The KF noise has been... sketchily made. We should discuss. Having
-%   done it with working at MITRE, a true model for the measurement noises
-%   for this model is less trivial than we may want it to be. I've made
-%   some simplifying assumptions for our KF that prevent accel meas error
-%   from affecting vel error, or pos, but since they're all technically
-%   related, this is technically untrue.
-%   2. In order to accomodate acceleration measurements, I create a
-%   separate stacked state for the measurement update, which was a blast to
-%   write, and I think should work. Looks hawt.
-%   3. I can't actually test this code without generating measurements.
-%   There shouldn't be much in the way of error *knocks on wood* but I'm
-%   sure there's something that'll need debugging when we have the ability
-%   to feed states in.
+
 
     %% Generate control inputs
     % Given current filter estimate and specified state, generate control
@@ -111,8 +93,8 @@ for idx = 1:1:TIME.N
     control_parameters.SYS = SYS;
     control_parameters.ref = reference_signal;
     control_parameters.control_law = control_law;
-    [control_inputs] = ...
-        GenerateControlInputs(state, control_parameters, TIME);
+%     [control_inputs] = ...
+%         GenerateControlInputs(state, control_parameters, TIME);
 
 
     %% Propogate true state
@@ -189,6 +171,7 @@ subplot(2, 3, 1);
 plot(TIME.t_vec, est_error_history(1,:));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{1}$', 'Interpreter','latex');
+ylim([-40,40]);
 title('$\Delta x_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -196,6 +179,7 @@ subplot(2, 3, 2);
 plot(TIME.t_vec, est_error_history(2,:));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{2}$', 'Interpreter','latex');
+ylim([-40,40]);
 title('$\Delta x_{2}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -203,6 +187,7 @@ subplot(2, 3, 3);
 plot(TIME.t_vec, est_error_history(3,:));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{3}$', 'Interpreter','latex');
+ylim([-40,40]);
 title('$\Delta x_{3}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -210,6 +195,7 @@ subplot(2, 3, 4);
 plot(TIME.t_vec, est_error_history(4,:));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{1}$', 'Interpreter','latex');
+ylim([-40,40]);
 title('$\Delta v_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -217,6 +203,7 @@ subplot(2, 3, 5);
 plot(TIME.t_vec, est_error_history(5,:));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{2}$', 'Interpreter','latex');
+ylim([-40,40]);
 title('$\Delta v_{2}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -224,6 +211,7 @@ subplot(2, 3, 6);
 plot(TIME.t_vec, est_error_history(6,:));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{3}$', 'Interpreter','latex');
+ylim([-40,40]);
 title('$\Delta v_{3}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -239,7 +227,7 @@ subplot(2, 3, 1);
 plot(TIME.t_vec, squeeze(cov_history(1,1,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{1}$', 'Interpreter','latex');
-ylim([-1000,1000]);
+ylim([-10,10]);
 title('$\Delta x_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -247,7 +235,7 @@ subplot(2, 3, 2);
 plot(TIME.t_vec, squeeze(cov_history(2,2,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{2}$', 'Interpreter','latex');
-ylim([-1000,1000]);
+ylim([-10,10]);
 title('$\Delta x_{2}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -255,7 +243,7 @@ subplot(2, 3, 3);
 plot(TIME.t_vec, squeeze(cov_history(3,3,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{3}$', 'Interpreter','latex');
-ylim([-1000,1000]);
+ylim([-10,10]);
 title('$\Delta x_{3}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -263,7 +251,7 @@ subplot(2, 3, 4);
 plot(TIME.t_vec, squeeze(cov_history(4,4,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{1}$', 'Interpreter','latex');
-ylim([-1000,1000]);
+ylim([-10,10]);
 title('$\Delta v_{1}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -271,6 +259,7 @@ subplot(2, 3, 5);
 plot(TIME.t_vec, squeeze(cov_history(5,5,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{2}$', 'Interpreter','latex');
+ylim([-10,10]);
 title('$\Delta v_{2}$ vs Time', 'Interpreter','latex');
 grid on;
 
@@ -278,7 +267,7 @@ subplot(2, 3, 6);
 plot(TIME.t_vec, squeeze(cov_history(6,6,:)));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta v_{3}$', 'Interpreter','latex');
-ylim([-1000,1000]);
+ylim([-10,10]);
 title('$\Delta v_{3}$ vs Time', 'Interpreter','latex');
 grid on;
 
