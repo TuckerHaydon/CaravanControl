@@ -7,7 +7,7 @@ tic;
 
 % Time information
 % Clock progresses at 100 ticks/second
-TIME.T_MAX_SECONDS = 5*60;
+TIME.T_MAX_SECONDS = 10*60;
 TIME.DT = 1/10;
 TIME.N = TIME.T_MAX_SECONDS / TIME.DT;
 TIME.t_vec = TIME.DT:TIME.DT:TIME.T_MAX_SECONDS;
@@ -15,7 +15,7 @@ TIME.idx = 1;
 TIME.now = TIME.t_vec(TIME.idx);
 
 % sensor_params
-sensor_params.range_std = 10;
+sensor_params.range_std = 5;
 sensor_params.GPS_std = 3;
 % Update Rates (s)
 sensor_params.range_Update_Rate = 1/10;
@@ -93,8 +93,8 @@ for idx = 1:1:TIME.N
     control_parameters.SYS = SYS;
     control_parameters.ref = reference_signal;
     control_parameters.control_law = control_law;
-%     [control_inputs] = ...
-%         GenerateControlInputs(state, control_parameters, TIME);
+    [control_inputs] = ...
+        GenerateControlInputs(state, control_parameters, TIME);
 
 
     %% Propogate true state
@@ -115,7 +115,7 @@ end
 
 %% Plotting
 % Plot states
-figure();
+h=figure();
 hold on;
 
 subplot(2, 3, 1);
@@ -162,9 +162,10 @@ grid on;
 
 hold off;
 suptitle('States over Time');
+saveas(h, 'states_over_time.jpg')
 
 % Plot Estimator Error
-figure();
+h=figure();
 hold on;
 
 subplot(2, 3, 1);
@@ -218,9 +219,10 @@ grid on;
 hold off;
 
 suptitle('Estimation Error over time');
+saveas(h, 'estimation_error_over_time.jpg')
 
 % Plot Estimator Covariances
-figure();
+h = figure();
 hold on;
 
 subplot(2, 3, 1);
@@ -273,14 +275,15 @@ grid on;
 
 hold off;
 
-suptitle('Estimation Variances over time');
+suptitle('Estimation Variance over time');
+saveas(h, 'estimation_variance_over_time.jpg')
 
 % Plot state errors
-figure();
+h = figure();
 hold on;
 
 subplot(1,3,1)
-plot(TIME.t_vec, state_history(1,:) - state_history(2,:));
+plot(TIME.t_vec, state_history(1,:) - state_history(2,:) - reference_signal(1));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{12}$', 'Interpreter','latex');
 title('$\Delta x_{12}$ vs Time', 'Interpreter','latex');
@@ -288,7 +291,7 @@ ylim([-20, 20])
 grid on;
 
 subplot(1,3,2)
-plot(TIME.t_vec, state_history(2,:) - state_history(3,:));
+plot(TIME.t_vec, state_history(2,:) - state_history(3,:) - reference_signal(2));
 xlabel('Time (s)', 'Interpreter','latex');
 ylabel('$\Delta x_{23}$', 'Interpreter','latex');
 title('$\Delta x_{23}$ vs Time', 'Interpreter','latex');
@@ -305,7 +308,8 @@ grid on;
 
 hold off;
 
-suptitle('State Error Over Time');
+suptitle('Tracking Error Over Time');
+saveas(h, 'tracking_error_over_time.jpg')
 
 
 %% End Program

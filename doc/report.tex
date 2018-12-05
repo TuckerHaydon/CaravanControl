@@ -71,8 +71,6 @@ caravan is equipped with the following sensor suite:
   \item The two following trucks are equipped with range sensors that measure
     the relative position between themselves and the truck in front of them at
     10 Hz.
-  \item All three trucks are equipped with an IMU that measures respective
-    acceleration at 100 Hz.
 \end{enumerate}
 
 Each truck may be independently controlled and may be instructed to either
@@ -166,18 +164,6 @@ Define the system observer equation.
   \end{bmatrix}
   }_{C}
   \vec{x}
-  +
-  \underbrace{
-  \begin{bmatrix}
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    0 & 0 & 0 \\
-    1 & 0 & 0 \\
-    0 & 1 & 0 \\
-    0 & 0 & 1
-  \end{bmatrix}
-  }_{D}
-  \vec{u}
 \end{equation}
 
 \subsection{Observability}
@@ -223,7 +209,14 @@ that it is well-designed and amenable to both estimation and control.
 %%% ----------------------------------------------------------------------
 \section{Estimator} \label{sec:kalman_filter}
 
-Estimators are designed to predict each state in a system, if that state information is not directly observable. Often, measurements are taken that contain indirect information about a state. For example, often accelerometer measurements are used in navigation to take measurements of acceleration, which can then be integrated twice to get position over time. Naturally, there is some noise and inaccuracy in this process, but provided the system is fully observable, a Kalman filter can be implemented on a linear system to get observation of state variables from measurement data. 
+Estimators are designed to predict each state in a system, if that state
+information is not directly observable. Often, measurements are taken that
+contain indirect information about a state. For example, often accelerometer
+measurements are used in navigation to take measurements of acceleration, which
+can then be integrated twice to get position over time. Naturally, there is some
+noise and inaccuracy in this process, but provided the system is fully
+observable, a Kalman filter can be implemented on a linear system to get
+observation of state variables from measurement data. 
 
 Kalman filters are a simple form of estimator that works on linear systems of the form:
 
@@ -232,41 +225,76 @@ Kalman filters are a simple form of estimator that works on linear systems of th
 	\label{fig:Estimation System Equations}
 \end{figure}
 
-We note that the Kalman filter assumes no user input related to the measurement. Because user input is fully known, we don?t wish to include it in our states that we are estimating. As a result, our Kalman Filter will not try to estimate acceleration, only position and velocity. Otherwise, the Kalman filter model is sufficient for this caravan problem.
+We note that the Kalman filter assumes no user input related to the measurement.
+Because user input is fully known, we don't wish to include it in our states
+that we are estimating. As a result, our Kalman Filter will not try to estimate
+acceleration, only position and velocity. Otherwise, the Kalman filter model is
+sufficient for this caravan problem.
 
 A Kalman filter operates in two steps. 
 
 \subsection{A Priori Measurements}
-In the first, the kalman filter performs an ?a priori? estimate, through which it produces an estimate of the state at the current discrete time step based only on the previous time step:
+In the first, the kalman filter performs an `a priori' estimate, through which
+it produces an estimate of the state at the current discrete time step based
+only on the previous time step:
 
 \begin{figure}[H]
 	\includegraphics{a_priori.png}
 	\label{fig:A Priori Estimate}
 \end{figure}
 
-Here, the P matrix is the covariance matrix of the system?s states, while Q is a measure of the system?s state noise. Discrete-time process noise can be modeled as follows:
+Here, the P matrix is the covariance matrix of the system's states, while Q is a
+measure of the system's state noise. Discrete-time process noise can be modeled
+as follows:
 
 \begin{figure}[H]
 	\includegraphics{Q.png}
 	\label{fig:Q Matrix}
 \end{figure}
 
-Where T is the period between each measurement, here defined as 0.1s, and  is the power spectral density (PSD) of noise for each component. For our system, we used relatively low process noise with a PSD of 1/10 for position, and 1/20 for velocity. We also note that the values of Fk and Gk are the discrete-time system dynamics, which are covered in another section of this paper, rather than continuous-time dynamics. 
+Where T is the period between each measurement, here defined as 0.1s, and  is
+the power spectral density (PSD) of noise for each component. For our system, we
+used relatively low process noise with a PSD of 1/10 for position, and 1/20 for
+velocity. We also note that the values of Fk and Gk are the discrete-time system
+dynamics, which are covered in another section of this paper, rather than
+continuous-time dynamics. 
 
 \subsection{A Posteriori Measurements}
-Next, the Kalman filter takes new measurements into the system and incorporates them. The Kalman filter creates a model for measurements and compares it to the actual measurement data it receives, and weights it?s a priori estimate with the new information to create a new, a posteriori measurement.
+Next, the Kalman filter takes new measurements into the system and incorporates
+them. The Kalman filter creates a model for measurements and compares it to the
+actual measurement data it receives, and weights it's a priori estimate with the
+new information to create a new, a posteriori measurement.
 
 \begin{figure}[H]
 	\includegraphics{a_post.png}
 	\label{fig:A Posteriori Measurements}
 \end{figure}
 
-The A posteriori formula can take many forms, and the form above is known as the Joseph?s form. The reason it is used in lieu of other forms is that the Joseph?s form equation copes well with sparse transition matrices that may lead to low precision inversion of the Pzz term. As a result, the Joseph?s form works best for this system, which has some very sparse matrices.
+The A posteriori formula can take many forms, and the form above is known as the
+Joseph's form. The reason it is used in lieu of other forms is that the Joseph's
+form equation copes well with sparse transition matrices that may lead to low
+precision inversion of the $P_{zz}$ term. As a result, the Joseph's form works
+best for this system, which has some very sparse matrices.
 
-The final result, xhat, is the most accurate version of the system states based on both a model of how these states grow, and measurements that relate to those states.
+The final result, $\hat{x}$, is the most accurate version of the system states
+based on both a model of how these states grow, and measurements that relate to
+those states.
 
 \subsection{Different Measurements at Different Times}
-For our system, two measurements were taken: position of the first vehicle, and range between each vehicle in the caravan. The former was taken once a second, while the latter was taken ten times each second. As a result, we wish to combine both measurements into the Kalman filter as these data come. How do we accommodate this in our Kalman filter system? There are two ways to accommodate measurements taken at different times in a Kalman filter: The first is to change the measurement noise covariance matrix R such that it assumes an infinite potential variance on measurement data for measurements that aren?t present at this time step. The other method is to have a varied-length measurement input Z, and to change the size of the matrix Hk at each step depending on the size of the Z vector. This latter method was chosen for this Kalman filter, as it worked better for this implementation with the matrix sparcity as it was. In instances where the Z vector didn?t include the position measurement, the top row of the H vector was clipped off.
+For our system, two measurements were taken: position of the first vehicle, and
+range between each vehicle in the caravan. The former was taken once a second,
+while the latter was taken ten times each second. As a result, we wish to
+combine both measurements into the Kalman filter as these data come. How do we
+accommodate this in our Kalman filter system' There are two ways to accommodate
+measurements taken at different times in a Kalman filter: The first is to change
+the measurement noise covariance matrix R such that it assumes an infinite
+potential variance on measurement data for measurements that aren't present at
+this time step. The other method is to have a varied-length measurement input Z,
+and to change the size of the matrix Hk at each step depending on the size of
+the Z vector. This latter method was chosen for this Kalman filter, as it worked
+better for this implementation with the matrix sparcity as it was. In instances
+where the Z vector didn't include the position measurement, the top row of the H
+vector was clipped off.
 
 %%% ----------------------------------------------------------------------
 \section{Control System Description}
@@ -487,22 +515,41 @@ the system dynamics. Many sensors and computers cannot produce nor consume
 continuous signals. As a result, system dynamics or measurements are
 represented as discrete systems. 
 
-As the system is LTI, 
+Define the discrete system. 
+\begin{align*}
+  x_{k+1} = A_{d} x_{k} + B_{d} u_k \\
+  y_{k} = C x_{k} + D u_{k}
+\end{align*}
+
+For a discretized system, only the system dynamics matrices (A, B) change:
+\begin{align*}
+  A_{d} = e^{A \cdot \Delta T} \\
+  B_d = \int_{0}^{\Delta T} e^{A \lambda} d \lambda B
+\end{align*}
+where $\Delta T$ is the discrete time interval. For this project, $\Delta T$ was
+chosen to match the smallest measurement interval, $\Delta T = 0.1$.
 
 
+\subsection{Discrete-Time, Finite Horizon LQR Controller}
+A discrete-time, finite horizon LQR controller was chosen to bring the trucks
+into `caravan' formation. Given a transient state weighting matrix, $Q$, a final
+state weighting matrix, $Q_{f}$, and an input weighting matrix, $R$, LQR
+controllers minimize the cost function:
+\begin{equation*}
+  J = \vec{x}_{f}^{T} Q_{f} \vec{x}_{f} + \sum_{k=0}^{N} \left[ \vec{x}_{k}^{T} Q
+  \vec{x}_{k} + \vec{u}_{k}^{T} R \vec{u}_{k} \right]
+\end{equation*}
 
-\subsection{Discrete-Time LQR Controller}
-
-
-Together, a Kalman Filter and LQR controller form a Linear-Quadratic-Gaussian
-(LQG) controller. 
+Together, the Kalman Filter described in section \ref{sec:kalman_filter} and the
+LQR controller described in this section form a Linear-Quadratic-Gaussian
+controller.
 
 
 %%% ----------------------------------------------------------------------
 \section{Simulation}
 The LQG controller was implemented in Matlab. The goal of the controller is to
-bring the trucks into the 'caravan' formation where the trucks follow each other
-at 30 meters/second with a separation of only 5 meters.
+bring the trucks into the 'caravan' formation within 10 minutes. The trucks
+should follow each other at 30 meters/second with a separation of only 5 meters.
 
 \begin{equation*}
   \vec{x}_{r} = 
@@ -519,29 +566,53 @@ at 30 meters/second with a separation of only 5 meters.
   \end{bmatrix} 
 \end{equation*}
 
+\begin{figure}[H]
+	\includegraphics[width=\linewidth]{state_error_over_time_with_truth.jpg}
+	\caption{Tracking Error with True State}
+	\label{fig:Tracking Error with True State}
+\end{figure}
+
+\begin{figure}[H]
+	\includegraphics[width=\linewidth]{state_error_over_time.jpg}
+	\caption{Tracking Error with Estimated State}
+	\label{fig:Tracking Error with Kalman Filter}
+\end{figure}
+
 
 %%% ----------------------------------------------------------------------
 \section{Discussion}
 The LQG 
 
 \subsection{Kalman Filter}
-The Kalman filter was run both with and without control input to ensure that it was working. In both cases, the filter?s error between estimated state and true state was driven to zero within two minutes. A plot of the estimation error and variances of estimated state positions is given below. 
+The Kalman filter was run both with and without control input to ensure that it
+was working. In both cases, the filter's error between estimated state and true
+state was driven to zero within two minutes. A plot of the estimation error and
+variances of estimated state positions is given below. 
 
 \begin{figure}[H]
-	\includegraphics[width=\linewidth]{est_error.png}
+	\includegraphics[width=\linewidth]{estimation_error_over_time.jpg}
 	\caption{Estimation Error}
 	\label{fig:Est. Error}
 \end{figure}
 
 \begin{figure}[H]
-	\includegraphics[width=\linewidth]{state_vars.png}
+	\includegraphics[width=\linewidth]{estimation_variances_over_time.jpg}
 	\caption{Estimated State Variances}
 	\label{fig:Est. State Vars}
 \end{figure}
 
-As can be seen, the estimation error is driven to zero quickly, and remains relatively stable throughout the system. In a few rare instances, a noisy measurement of vehicle position bounced the error up for a second or two, but these errors were quickly accommodated by the Kalman filter.
+As can be seen, the estimation error is driven to zero quickly, and remains
+relatively stable throughout the system. In a few rare instances, a noisy
+measurement of vehicle position bounced the error up for a second or two, but
+these errors were quickly accommodated by the Kalman filter.
 
-The error of each state was interesting. The kalman filter trusted its estimate of each vehicle position in the caravan less than the vehicle in front of it. This makes sense, given that only the first vehicle has actual position measurements, and subsequent position estimates have more and more noise (driven by range values). This intuitive image of how the Kalman Filter was able to estimate vehicle positions and velocities helped to confirm that the Kalman filter was operating exactly as expected.
+The error of each state was interesting. The kalman filter trusted its estimate
+of each vehicle position in the caravan less than the vehicle in front of it.
+This makes sense, given that only the first vehicle has actual position
+measurements, and subsequent position estimates have more and more noise (driven
+by range values). This intuitive image of how the Kalman Filter was able to
+estimate vehicle positions and velocities helped to confirm that the Kalman
+filter was operating exactly as expected.
 
 
 %%% ----------------------------------------------------------------------
