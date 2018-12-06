@@ -94,7 +94,7 @@ for idx = 1:1:TIME.N
     control_parameters.ref = reference_signal;
     control_parameters.control_law = control_law;
     [control_inputs] = ...
-        GenerateControlInputs(state, control_parameters, TIME);
+        GenerateControlInputs(state_estimate.x, control_parameters, TIME);
 
 
     %% Propogate true state

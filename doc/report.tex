@@ -47,7 +47,12 @@
 \email{thaydon@utexas.edu, connor.brashar@utexas.edu}
 \date{\today}
 \begin{abstract}
-  This is the project abstract.
+  A fleet of self-driving trucks is simulated on a long, flat, straight piece of
+  road. The fleet is brought into a `caravan' formation within ten minutes via a
+  discrete-time, finite horizon LQG controller. The trucks have limited sensing
+  capabilities: GPS for the lead truck and range sensors between all following
+  trucks. Finally, a hands-on museum exhibit mirroring the simulation and
+  demonstrating autonomy and control concepts is proposed.
 \end{abstract}
 \maketitle
 
@@ -148,9 +153,6 @@ Define the system observer equation.
     x_{1}             \\
     \Delta x_{12}     \\
     \Delta x_{23}     \\
-    a_{1}             \\
-    a_{2}             \\
-    a_{3}             
   \end{bmatrix}
   =
   \underbrace{
@@ -205,72 +207,103 @@ system is controllable}.
 The fact that the nominal system is both observable and controllable indicates
 that it is well-designed and amenable to both estimation and control.
 
+\subsection{Discrete-Time Dynamics} \label{sec:discrete_time}
+Software implementations of continuous kinematic systems must first discretize
+the system dynamics. Many sensors and computers cannot produce nor consume
+continuous signals. As a result, system dynamics or measurements are
+represented as discrete systems. 
+
+Define the discrete system. 
+\begin{align*}
+  x_{k+1} = A_{d} x_{k} + B_{d} u_k \\
+  y_{k} = C x_{k} + D u_{k}
+\end{align*}
+
+For a discretized system, only the system dynamics matrices (A, B) change:
+\begin{align*}
+  A_{d} = e^{A \cdot \Delta T} \\
+  B_d = \int_{0}^{\Delta T} e^{A \lambda} d \lambda B
+\end{align*}
+where $\Delta T$ is the discrete time interval. For this project, $\Delta T$ was
+chosen to match the smallest measurement interval, $\Delta T = 0.1$.
+
+These discrete-time dynamics are used in both the estimator and the controller.
+
 
 %%% ----------------------------------------------------------------------
-\section{Estimator} \label{sec:kalman_filter}
-
+\section{Estimator} \label{sec:Kalman_filter}
 Estimators are designed to predict each state in a system, if that state
 information is not directly observable. Often, measurements are taken that
-contain indirect information about a state. For example, often accelerometer
-measurements are used in navigation to take measurements of acceleration, which
-can then be integrated twice to get position over time. Naturally, there is some
-noise and inaccuracy in this process, but provided the system is fully
-observable, a Kalman filter can be implemented on a linear system to get
-observation of state variables from measurement data. 
+contain indirect information about a state. For example, accelerometer
+measurements must be integrated twice to get a position measurement. Naturally,
+there is some noise and inaccuracy in this process, but provided the system is
+fully observable, a Kalman filter can be implemented on a linear system to get
+direct estimates of full state variables from measurement data. 
 
 Kalman filters are a simple form of estimator that works on linear systems of the form:
 
-\begin{figure}[H]
-	\includegraphics{system_eqs.png}
-	\label{fig:Estimation System Equations}
-\end{figure}
+\begin{align*}
+    \dot{x} &= A x + B u + v \\
+    z &= Hx + w
+\end{align*}
 
-We note that the Kalman filter assumes no user input related to the measurement.
-Because user input is fully known, we don't wish to include it in our states
-that we are estimating. As a result, our Kalman Filter will not try to estimate
-acceleration, only position and velocity. Otherwise, the Kalman filter model is
-sufficient for this caravan problem.
+where $v$ and $w$ are respectively random process and measurement noise, and $H
+= C$. We note that the Kalman filter assumes no user input related to the
+measurement.  Because user input is known and prescribed by the controller, we
+don't wish to include it in our states that we are estimating. As a result, our
+Kalman Filter will not try to estimate acceleration, only position and velocity.
+The Kalman filter model is sufficient for this caravan problem.
 
 A Kalman filter operates in two steps. 
 
 \subsection{A Priori Measurements}
-In the first, the kalman filter performs an `a priori' estimate, through which
+In the first step, the Kalman filter performs an \textit{a priori} estimate, through which
 it produces an estimate of the state at the current discrete time step based
-only on the previous time step:
+only on the previous time step by forward-simulating the system dynamics:
 
-\begin{figure}[H]
-	\includegraphics{a_priori.png}
-	\label{fig:A Priori Estimate}
-\end{figure}
+\begin{align*}
+  \bar{x}_{k} &= A_{d} \hat{x}_{k-1} + B_{d} u_{k} \\
+  \bar{P}_{k} &= A_{d} \hat{P}_{k-1} A_{d}^{T} + Q_{k}
+\end{align*}
 
 Here, the P matrix is the covariance matrix of the system's states, while Q is a
-measure of the system's state noise. Discrete-time process noise can be modeled
+measure of the system's process noise. Discrete-time process noise is modeled
 as follows:
 
-\begin{figure}[H]
-	\includegraphics{Q.png}
-	\label{fig:Q Matrix}
-\end{figure}
+\begin{equation*}
+  \renewcommand*{\arraystretch}{2}
+    Q_{k} = 
+  \begin{bmatrix}
+    \frac{T^5}{20} & \frac{T^4}{8} & \frac{T^3}{6} \\
+    \frac{T^4}{8} & \frac{T^3}{3} & \frac{T^2}{2} \\
+    \frac{T^3}{6} & \frac{T^2}{2} & T
+  \end{bmatrix}
+  \tilde{q}
+\end{equation*}
 
-Where T is the period between each measurement, here defined as 0.1s, and  is
-the power spectral density (PSD) of noise for each component. For our system, we
-used relatively low process noise with a PSD of 1/10 for position, and 1/20 for
-velocity. We also note that the values of Fk and Gk are the discrete-time system
-dynamics, which are covered in another section of this paper, rather than
-continuous-time dynamics. 
+Where T is the period between each measurement, here defined as 0.1s, and
+$\tilde{q}$  is the power spectral density (PSD) of noise for each component.
+For our system, we used relatively low process noise with a PSD of 1/10 for
+position, and 1/20 for velocity. We also note that the values of $A_d$ and $B_d$
+are the discrete-time system dynamics, which are covered in
+section \ref{sec:discrete_time}.
 
 \subsection{A Posteriori Measurements}
 Next, the Kalman filter takes new measurements into the system and incorporates
 them. The Kalman filter creates a model for measurements and compares it to the
-actual measurement data it receives, and weights it's a priori estimate with the
-new information to create a new, a posteriori measurement.
+actual measurement data it receives, and weights it's \textit{a priori} estimate
+with the new information to create a new, \textit{a posteriori} measurement. The
+\textit{a posteriori} measurement update equation:
 
-\begin{figure}[H]
-	\includegraphics{a_post.png}
-	\label{fig:A Posteriori Measurements}
-\end{figure}
+\begin{align*}
+  \bar{z}_{k} &= H \bar{x}_{k} \\
+  P_{zz} &=  H \bar{P} H^{T} + R_{k} \\
+  W &= \bar{P} H^{T} P_{zz}^{-1} \\
+  \hat{x}_{k} &= \bar{x}_{k} + W (z_{k} - \bar{z}_{k}) \\
+  \hat{P}_{k} &= \bar{P} - W P_{zz} W^{T}
+\end{align*}
 
-The A posteriori formula can take many forms, and the form above is known as the
+This \textit{a posteriori} formula can take many forms, and the form above is known as the
 Joseph's form. The reason it is used in lieu of other forms is that the Joseph's
 form equation copes well with sparse transition matrices that may lead to low
 precision inversion of the $P_{zz}$ term. As a result, the Joseph's form works
@@ -282,19 +315,54 @@ those states.
 
 \subsection{Different Measurements at Different Times}
 For our system, two measurements were taken: position of the first vehicle, and
-range between each vehicle in the caravan. The former was taken once a second,
-while the latter was taken ten times each second. As a result, we wish to
-combine both measurements into the Kalman filter as these data come. How do we
-accommodate this in our Kalman filter system' There are two ways to accommodate
-measurements taken at different times in a Kalman filter: The first is to change
-the measurement noise covariance matrix R such that it assumes an infinite
-potential variance on measurement data for measurements that aren't present at
-this time step. The other method is to have a varied-length measurement input Z,
-and to change the size of the matrix Hk at each step depending on the size of
-the Z vector. This latter method was chosen for this Kalman filter, as it worked
-better for this implementation with the matrix sparcity as it was. In instances
-where the Z vector didn't include the position measurement, the top row of the H
-vector was clipped off.
+range between each vehicle in the caravan. These measurements arrived at
+different time (1 Hz \& 10 Hz), but the Kalman filter described above assumes
+that both measurements arrive simultaneously, however this does not occur in our
+system. We wish to combine both measurements into the Kalman filter as soon as
+these data arrive.
+
+There are two ways to accommodate measurements taken at different times in a
+Kalman filter: 
+\begin{enumerate}
+  \item Set the covariance of missing measurements infinity
+  \item Change the size of the matrix $H_k$ at each step to correspond only with
+    the present measurements.
+\end{enumerate}
+
+This latter method was chosen for this Kalman filter. Changing $H_k$ was not
+difficult, while there were numerical issues with an infinite covariance.
+
+\subsection{Simulation}
+The Kalman filter was run both with and without control input to ensure that it
+was working. In both cases, the filter's error between estimated state and true
+state was driven to zero within two minutes. A plot of the estimation error and
+variances of estimated state positions is given below. 
+
+\begin{figure}[H]
+	\includegraphics[width=\linewidth]{estimation_error_over_time.jpg}
+	\caption{Estimation Error}
+	\label{fig:Est. Error}
+\end{figure}
+
+\begin{figure}[H]
+	\includegraphics[width=\linewidth]{estimation_variance_over_time.jpg}
+	\caption{Estimated State Variances}
+	\label{fig:Est. State Vars}
+\end{figure}
+
+As can be seen, the estimation error is driven to zero quickly, and remains
+relatively stable throughout the system. In a few rare instances, a noisy
+measurement of vehicle position bounced the error up for a second or two, but
+these errors were quickly accommodated by the Kalman filter.
+
+Note the increasing variance of state error from trucks one to three. The Kalman
+filter's estimate decreased in accuracy along the extent. This makes sense,
+given that only the first vehicle has direct position measurements, and
+subsequent position estimates must be derived from the combination of that
+measurement with other additional noisy measurements. The noisy sensor
+measurements cascade down the caravan, decreasing the accuracy of the estimate
+along the way.
+
 
 %%% ----------------------------------------------------------------------
 \section{Control System Description}
@@ -509,28 +577,9 @@ Now the system is in the standard form.
 \end{align*}
 
 
-\subsection{Discrete-Time Dynamics}
-Software implementations of continuous kinematic systems must first discretize
-the system dynamics. Many sensors and computers cannot produce nor consume
-continuous signals. As a result, system dynamics or measurements are
-represented as discrete systems. 
-
-Define the discrete system. 
-\begin{align*}
-  x_{k+1} = A_{d} x_{k} + B_{d} u_k \\
-  y_{k} = C x_{k} + D u_{k}
-\end{align*}
-
-For a discretized system, only the system dynamics matrices (A, B) change:
-\begin{align*}
-  A_{d} = e^{A \cdot \Delta T} \\
-  B_d = \int_{0}^{\Delta T} e^{A \lambda} d \lambda B
-\end{align*}
-where $\Delta T$ is the discrete time interval. For this project, $\Delta T$ was
-chosen to match the smallest measurement interval, $\Delta T = 0.1$.
 
 
-\subsection{Discrete-Time, Finite Horizon LQR Controller}
+\subsection{Discrete-Time, Finite Horizon LQR Controller} \label{sec:LQR}
 A discrete-time, finite horizon LQR controller was chosen to bring the trucks
 into `caravan' formation. Given a transient state weighting matrix, $Q$, a final
 state weighting matrix, $Q_{f}$, and an input weighting matrix, $R$, LQR
@@ -540,16 +589,50 @@ controllers minimize the cost function:
   \vec{x}_{k} + \vec{u}_{k}^{T} R \vec{u}_{k} \right]
 \end{equation*}
 
-Together, the Kalman Filter described in section \ref{sec:kalman_filter} and the
-LQR controller described in this section form a Linear-Quadratic-Gaussian
-controller.
+The control input at every time, $u_k$, is determined via dynamic programming. A
+proof of optimality is not provided in this report but is outlined in
+\cite{LQRStanford}. $u_k$ is determined as follows: 
+\begin{enumerate}
+  \item Set $P_{N} = Q_{f}$
+  \item For $t=N, \hdots, 1$: $P_{t-1} = Q + A^{T}P_{t}A - A^{T} P_{t}
+    B(R + B^{T}P_{t}B)^{-1}B^{T}P_{t}A$
+  \item For $t=0, \hdots, N-1$: $K_{t} = -(R + B^{T} P_{t+1}
+    B)^{-1}B^{T}P_{t+1}A$
+  \item For $t=0, \hdots, N-1$: $u_{t}=K_{t}x_{t}$
+\end{enumerate}
+
+At the beginning of the horizon, the entire LQR control trajectory is
+pre-computed and the respective gain matrixes cached. For the duration of the
+control period, the optimal control input is the product of the time-respective
+gain matrix and the current state.
 
 
 %%% ----------------------------------------------------------------------
-\section{Simulation}
+\subsection{LQR Simulation}
 The LQG controller was implemented in Matlab. The goal of the controller is to
 bring the trucks into the 'caravan' formation within 10 minutes. The trucks
 should follow each other at 30 meters/second with a separation of only 5 meters.
+
+\begin{equation*}
+ \vec{x}_{0} = 
+  \begin{bmatrix}
+    x_{1} \\
+    x_{2} \\
+    x_{3} \\
+    v_{1} \\
+    v_{2} \\
+    v_{3}
+  \end{bmatrix} 
+  =
+  \begin{bmatrix}
+    200 \\
+    75 \\
+    0 \\
+    30 \\
+    27 \\
+    25
+  \end{bmatrix} 
+\end{equation*}
 
 \begin{equation*}
   \vec{x}_{r} = 
@@ -567,52 +650,63 @@ should follow each other at 30 meters/second with a separation of only 5 meters.
 \end{equation*}
 
 \begin{figure}[H]
+	\includegraphics[width=\linewidth]{states_over_time_with_truth.jpg}
+	\caption{States Over Time with Full State Feedback}
+\end{figure}
+
+\begin{figure}[H]
 	\includegraphics[width=\linewidth]{tracking_error_over_time_with_truth.jpg}
-	\caption{Tracking Error with True State}
-	\label{fig:Tracking Error with True State}
+	\caption{Tracking Error Over Time with Full State Feedback}
+\end{figure}
+
+The LQR controller is optimal for choices of $Q_f$, $Q_k$, and $R_k$, but it
+does not guarantee or follow any input or state constraints. This may cause
+problems for real-life systems. For example, in the simulation above, the first
+truck abruptly brakes and drops from 30 m/s to 22 m/s almost immediately. Not
+only is this physically impossible, but it would be very unsafe on a freeway!
+Moreover, from the error graph, one can see that the second truck nearly rams
+the first truck (error of -5m implies a crash). This LQR controller was
+hand-tuned to prevent that from happening, but there are no hard mathematical
+constraints preventing that from happening in a real system.
+
+LQR controllers can admit state and input constraints, but the controllers
+become more complicated. For this project, no constraints were implemented.
+
+
+%%% ----------------------------------------------------------------------
+\subsection{LQG Simulation}
+Together, the Kalman Filter described in section \ref{sec:Kalman_filter} and the
+LQR controller described in section \ref{sec:LQR} form a Linear-Quadratic-Gaussian
+controller. The state estimate from the Kalman filter replaces the true state,
+but optimality is guaranteed via the Separation Principle.
+
+\begin{figure}[H]
+	\includegraphics[width=\linewidth]{states_over_time.jpg}
+	\caption{States Over Time with Estimated State}
 \end{figure}
 
 \begin{figure}[H]
 	\includegraphics[width=\linewidth]{tracking_error_over_time.jpg}
 	\caption{Tracking Error with Estimated State}
-	\label{fig:Tracking Error with Kalman Filter}
 \end{figure}
 
+Clearly the system is tracking and the trucks enter the caravan formation.
+However, the tracking performance is noticeably worse than the LQR controller.
+The LQR controller was designed assuming that full state would be known, but in
+fact, only a noise estimate is available so the performance is worse. 
 
-%%% ----------------------------------------------------------------------
-\section{Discussion}
-The LQG 
+The LQG controller suffers from the same lack of state and input constraints as
+the LQR controller, but worse! The trucks nearly ram each other and have a
+rather noise steady-state error. Moreover, there is no guarantee that the LQG
+system has any safety margins \cite{doyle1978guaranteed}. Few passengers would
+want to ride in these trucks!
 
-\subsection{Kalman Filter}
-The Kalman filter was run both with and without control input to ensure that it
-was working. In both cases, the filter's error between estimated state and true
-state was driven to zero within two minutes. A plot of the estimation error and
-variances of estimated state positions is given below. 
-
-\begin{figure}[H]
-	\includegraphics[width=\linewidth]{estimation_error_over_time.jpg}
-	\caption{Estimation Error}
-	\label{fig:Est. Error}
-\end{figure}
-
-\begin{figure}[H]
-	\includegraphics[width=\linewidth]{estimation_variance_over_time.jpg}
-	\caption{Estimated State Variances}
-	\label{fig:Est. State Vars}
-\end{figure}
-
-As can be seen, the estimation error is driven to zero quickly, and remains
-relatively stable throughout the system. In a few rare instances, a noisy
-measurement of vehicle position bounced the error up for a second or two, but
-these errors were quickly accommodated by the Kalman filter.
-
-The error of each state was interesting. The kalman filter trusted its estimate
-of each vehicle position in the caravan less than the vehicle in front of it.
-This makes sense, given that only the first vehicle has actual position
-measurements, and subsequent position estimates have more and more noise (driven
-by range values). This intuitive image of how the Kalman Filter was able to
-estimate vehicle positions and velocities helped to confirm that the Kalman
-filter was operating exactly as expected.
+For a safer autonomous truck system, both state and input constraints would have
+to be implemented. Moreover, the state of the system may be expanded to include
+acceleration/jerk estimates and constraints on these states may also be required
+to ensure passenger comfort. More sensors and rigorous testing/simulation may be
+required to reduce state uncertainty and increase robustness against sensor
+noise/outages.
 
 
 %%% ----------------------------------------------------------------------
@@ -649,17 +743,17 @@ Behind the scenes, a Raspberry Pi B+ (RPB) controls the three locomotives. The
 locomotives have been 'hacked' and carry a Raspberry Pi Zero (RPZ) that
 modulates the supplied battery voltage to each of the locomotives. By modulating
 the battery voltage, the RPZ can directly control the speed of each of the
-locomotives. Each of the RPZs carry an inertial measurement unit that measures
-the acceleration of each of the locomotives. The RPZs transmit the acceleration
-data to the RPB via wifi. A camera is suspended above the table and connected to
-the RPB. The RPB uses an image processing algorithm on the incoming camera data
-to track the location of each of the locomotives and generate the position and
-position difference measurements. The RPB fuses the camera measurements and the
-accelerometer measurements together with the kalman filter described in section
-\ref{sec:kalman_filter}.
+locomotives. 
+
+A camera is suspended above the table and connected to the RPB. The RPB uses an
+image processing algorithm on the incoming camera data to track the location of
+each of the locomotives and generate the position and position difference
+measurements. The RPB fuses the camera measurements in a Kalman filter
+described in section \ref{sec:Kalman_filter} to generate position and velocity
+estimates.
 
 After the 'go' button is pressed, the RPB reads in the current analog knob
-values and solves the discrete-time algebraic riccati equation. Once solved, the
+values and solves for optimal control input values. Once solved, the
 RPB streams control input commands to the RPZs via wifi. The RPZs convert the
 control input into motor voltages and drive the locomotives. 
 
@@ -680,12 +774,11 @@ given another chance.
     1 Wifi Dongle                 & \$15  \\
     1 Raspberry Pi Camera Module  & \$25  \\
     3 Raspberry Pi Zero W         & \$30  \\
-    3 IMU Sensors                 & \$45  \\
     3 PWM Motor Shields           & \$120  \\
     1 LCD TV                      & \$300 \\ 
     6 Knobs and 1 button          & \$50  \\
     \hline
-    Total Price                   & \$875 \\
+    Total Price                   & \$830 \\
     \hline
   \end{tabular}
 \end{center}
